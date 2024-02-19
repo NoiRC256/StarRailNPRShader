@@ -163,6 +163,11 @@ void BodyColorFragment(
     diffuseData.NoL = dirWS.NoL;
     diffuseData.singleMaterial = false;
     diffuseData.rampCoolOrWarm = _RampCoolWarmLerpFactor;
+    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
+    tmpVertexInput.positionWS = i.positionWS;
+    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
+    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
+    diffuseData.shadowAttenutation = shadowAttenutation;
 
     SpecularData specularData;
     specularData.color = specularColor.rgb;
@@ -202,9 +207,9 @@ void BodyColorFragment(
     LIGHT_LOOP_BEGIN(pixelLightCount)
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
-        float attenuationAdd = saturate(lightAdd.distanceAttenuation);
-
-        diffuseAdd += GetHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
+        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
 
         SpecularData specularDataAdd;
         specularDataAdd.color = specularColor.rgb;
@@ -213,7 +218,7 @@ void BodyColorFragment(
         specularDataAdd.edgeSoftness = specularEdgeSoftness;
         specularDataAdd.intensity = specularIntensity;
         specularDataAdd.metallic = specularMetallic;
-        specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
+        // specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
     LIGHT_LOOP_END
 
     // Output

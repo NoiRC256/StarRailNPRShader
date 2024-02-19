@@ -85,7 +85,8 @@ float3 GetFaceOrEyeDiffuse(
     float4 uv,
     float3 baseColor,
     float3 lightColor,
-    float4 faceMap)
+    float4 faceMap,
+    half shadowAttenutation)
 {
     // 游戏模型才有 UV2
     #if defined(_MODEL_GAME) && defined(_FACEMAPUV2_ON)
@@ -142,7 +143,11 @@ void FaceOpaqueAndZFragment(
     texColor.rgb = lerp(texColor.rgb, exEyeShadow, _ExShadowIntensity);
 
     // Diffuse
-    float3 diffuse = GetFaceOrEyeDiffuse(dirWS, headDirWS, i.uv, texColor.rgb, light.color, faceMap);
+    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
+    tmpVertexInput.positionWS = i.positionWS;
+    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
+    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
+    float3 diffuse = GetFaceOrEyeDiffuse(dirWS, headDirWS, i.uv, texColor.rgb, light.color, faceMap, shadowAttenutation);
 
     EmissionData emissionData;
     emissionData.color = _EmissionColor.rgb;
@@ -155,13 +160,14 @@ void FaceOpaqueAndZFragment(
 
     // TODO: 嘴唇 Outline: 0.5 < faceMap.g < 0.95
 
-    float3 diffuseAdd = 0;
+    float3 diffuseAdd = 0; 
     uint pixelLightCount = GetAdditionalLightsCount();
     LIGHT_LOOP_BEGIN(pixelLightCount)
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
-        float attenuationAdd = saturate(lightAdd.distanceAttenuation);
-        diffuseAdd += GetHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
+        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
     LIGHT_LOOP_END
 
     // Output

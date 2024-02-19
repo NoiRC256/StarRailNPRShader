@@ -174,6 +174,7 @@ struct DiffuseData
     float NoL;
     bool singleMaterial;
     float rampCoolOrWarm;
+    float shadowAttenutation;
 };
 
 float3 GetRampDiffuse(
@@ -195,6 +196,12 @@ float3 GetRampDiffuse(
 float3 GetHalfLambertDiffuse(float NoL, float3 baseColor, float3 lightColor)
 {
     float halfLambert = pow(NoL * 0.5 + 0.5, 2);
+    return baseColor * lightColor * halfLambert;
+}
+
+float3 GetSoftHalfLambertDiffuse(float NoL, float3 baseColor, float3 lightColor)
+{
+    float halfLambert = pow(NoL * 0.5 + 0.5, 0.5);
     return baseColor * lightColor * halfLambert;
 }
 
@@ -296,6 +303,16 @@ float3 GetRimLight(
     float ditherAlphaFadeOut = smoothstep(0.8, 1, rimLightData.ditherAlpha);
 
     return rimLightData.color * (intensity * ditherAlphaFadeOut);
+}
+
+// Helper function to blend colors focusing on hue and saturation, preserving base luminance
+float3 BlendColorPreserveLuminance(float3 baseColor, float3 lightColor) {
+    float baseLuminance = Luminance(baseColor);
+    float lightLuminance = Luminance(lightColor);
+    float3 colorDiff = lightColor - lightLuminance;
+    // Blend based on the base color's luminance and the light's color difference
+    float3 blendedColor = baseColor;
+    return blendedColor;
 }
 
 void DoDitherAlphaEffect(float4 svPosition, float ditherAlpha)

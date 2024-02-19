@@ -24,6 +24,7 @@
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Shared/CharCore.hlsl"
 #include "Shared/CharDepthOnly.hlsl"
@@ -104,6 +105,12 @@ float4 BaseHairOpaqueFragment(
     diffuseData.singleMaterial = true;
     diffuseData.rampCoolOrWarm = _RampCoolWarmLerpFactor;
 
+    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
+    tmpVertexInput.positionWS = i.positionWS; // Add a normal bias term
+    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
+    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
+    diffuseData.shadowAttenutation = shadowAttenutation;
+
     SpecularData specularData;
     specularData.color = _SpecularColor0.rgb;
     specularData.NoH = dirWS.NoV * (dirWS.NoL > 0); // 感觉 NoV 做头发高光更好看！有随视线流动的效果
@@ -142,9 +149,9 @@ float4 BaseHairOpaqueFragment(
     LIGHT_LOOP_BEGIN(pixelLightCount)
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
-        float attenuationAdd = saturate(lightAdd.distanceAttenuation);
-
-        diffuseAdd += GetHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
+        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
 
         SpecularData specularDataAdd;
         specularDataAdd.color = _SpecularColor0.rgb;
@@ -153,11 +160,21 @@ float4 BaseHairOpaqueFragment(
         specularDataAdd.edgeSoftness = _SpecularEdgeSoftness0;
         specularDataAdd.intensity = _SpecularIntensity0;
         specularDataAdd.metallic = 0;
-        specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
+        // specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
     LIGHT_LOOP_END
 
+    float4 colorTarget = float4(diffuse + specular + rimLight + emission + diffuseAdd + specularAdd, texColor.a);
+
+    // VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
+    // tmpVertexInput.positionWS = i.positionWS; // Add a normal bias term
+    // float4 shadowCoord = GetShadowCoord(tmpVertexInput);
+    // half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
+    // float4 shadowColor = float4(0.2,0.2,0.2,0.5);
+    // colorTarget = lerp(colorTarget, shadowColor, (1.0 - shadowAttenutation) * shadowColor.a);
+
+
     // Output
-    return float4(diffuse + specular + rimLight + emission + diffuseAdd + specularAdd, texColor.a);
+    return colorTarget;
 }
 
 void HairOpaqueFragment(

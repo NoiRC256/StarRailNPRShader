@@ -29,6 +29,7 @@
 // ==========================
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 #include "CharRenderingHelpers.hlsl"
 
 struct CharCoreAttributes
