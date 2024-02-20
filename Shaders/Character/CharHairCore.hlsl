@@ -139,6 +139,7 @@ float4 BaseHairOpaqueFragment(
 
     float3 diffuse = GetRampDiffuse(diffuseData, i.color, texColor.rgb, light.color, lightMap,
         TEXTURE2D_ARGS(_RampMapCool, sampler_RampMapCool), TEXTURE2D_ARGS(_RampMapWarm, sampler_RampMapWarm));
+    float luminance = Luminance(diffuse);
     float3 specular = GetSpecular(specularData, texColor.rgb, light.color, lightMap);
     float3 rimLight = GetRimLight(rimLightData, i.positionHCS, dirWS.N, isFrontFace, lightMap);
     float3 emission = GetEmission(emissionData, texColor.rgb);
@@ -149,9 +150,8 @@ float4 BaseHairOpaqueFragment(
     LIGHT_LOOP_BEGIN(pixelLightCount)
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
-        float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
-        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
-        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
+        float attenuationAdd = saturate(lightAdd.distanceAttenuation);
+        diffuseAdd += texColor.rgb * lightAdd.color * attenuationAdd;
 
         SpecularData specularDataAdd;
         specularDataAdd.color = _SpecularColor0.rgb;
@@ -160,10 +160,11 @@ float4 BaseHairOpaqueFragment(
         specularDataAdd.edgeSoftness = _SpecularEdgeSoftness0;
         specularDataAdd.intensity = _SpecularIntensity0;
         specularDataAdd.metallic = 0;
-        // specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
+        // specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd * 0.5f;
     LIGHT_LOOP_END
 
-    float4 colorTarget = float4(diffuse + specular + rimLight + emission + diffuseAdd + specularAdd, texColor.a);
+    diffuse = SetLuminance(float3(diffuse + diffuseAdd), luminance);
+    float4 colorTarget = float4(diffuse + specular + rimLight + emission + specularAdd, texColor.a);
 
     // VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
     // tmpVertexInput.positionWS = i.positionWS; // Add a normal bias term

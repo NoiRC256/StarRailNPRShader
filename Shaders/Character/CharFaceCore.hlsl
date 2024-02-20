@@ -148,6 +148,7 @@ void FaceOpaqueAndZFragment(
     float4 shadowCoord = GetShadowCoord(tmpVertexInput);
     half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
     float3 diffuse = GetFaceOrEyeDiffuse(dirWS, headDirWS, i.uv, texColor.rgb, light.color, faceMap, shadowAttenutation);
+    float luminance = Luminance(diffuse);
 
     EmissionData emissionData;
     emissionData.color = _EmissionColor.rgb;
@@ -165,13 +166,13 @@ void FaceOpaqueAndZFragment(
     LIGHT_LOOP_BEGIN(pixelLightCount)
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
-        float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
-        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
-        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
+        float attenuationAdd = saturate(lightAdd.distanceAttenuation);
+        diffuseAdd += texColor.rgb * lightAdd.color * attenuationAdd;
     LIGHT_LOOP_END
 
     // Output
-    colorTarget = float4(diffuse + emission + diffuseAdd, texColor.a);
+    diffuse = SetLuminance(float3(diffuse + diffuseAdd), luminance);
+    colorTarget = float4(diffuse + emission, texColor.a);
     bloomTarget = float4(_BloomIntensity0, 0, 0, 0);
 }
 
