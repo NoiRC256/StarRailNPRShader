@@ -200,6 +200,7 @@ void BodyColorFragment(
     float3 specular = GetSpecular(specularData, texColor.rgb, light.color, lightMap);
     float3 rimLight = GetRimLight(rimLightData, i.positionHCS, dirWS.N, isFrontFace, lightMap);
     float3 emission = GetEmission(emissionData, texColor.rgb);
+    float luminance = RGBToHSV(diffuse).z;
 
     float3 diffuseAdd = 0;
     float3 specularAdd = 0;
@@ -208,8 +209,9 @@ void BodyColorFragment(
         Light lightAdd = GetAdditionalLight(lightIndex, i.positionWS);
         Directions dirWSAdd = GetWorldSpaceDirections(lightAdd, i.positionWS, i.normalWS);
         float attenuationAdd = saturate(lightAdd.distanceAttenuation) * 0.5f;
-        // float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
-        // diffuseAdd += BlendColorPreserveLuminance(texColor.rgb, texColor.rgb + halfLambertDiffuse) - texColor.rgb;
+        //float3 halfLambertDiffuse = GetSoftHalfLambertDiffuse(dirWSAdd.NoL, texColor.rgb, lightAdd.color) * attenuationAdd;
+        float3 halfLambertDiffuse = texColor.rgb * lightAdd.color * attenuationAdd;
+        diffuseAdd += halfLambertDiffuse;
 
         SpecularData specularDataAdd;
         specularDataAdd.color = specularColor.rgb;
@@ -218,11 +220,15 @@ void BodyColorFragment(
         specularDataAdd.edgeSoftness = specularEdgeSoftness;
         specularDataAdd.intensity = specularIntensity;
         specularDataAdd.metallic = specularMetallic;
-        // specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
+        specularAdd += GetSpecular(specularDataAdd, texColor.rgb, lightAdd.color, lightMap) * attenuationAdd;
     LIGHT_LOOP_END
 
     // Output
-    colorTarget = float4(diffuse + specular + rimLight + emission + diffuseAdd + specularAdd, texColor.a);
+    float3 diffuseColorTarget = float3(diffuse + diffuseAdd);
+    float3 diffuseHSV = RGBToHSV(diffuseColorTarget);
+    diffuseHSV.z = luminance;
+    diffuseColorTarget = HSVToRGB(diffuseHSV);
+    colorTarget = float4(diffuseColorTarget + specular + rimLight + emission + specularAdd, texColor.a);
     bloomTarget = float4(bloomIntensity, 0, 0, 0);
     ApplyDebugSettings(lightMap, colorTarget, bloomTarget);
 }
