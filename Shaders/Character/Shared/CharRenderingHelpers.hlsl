@@ -193,6 +193,14 @@ float3 GetRampDiffuse(
     return rampColor * baseColor * lightColor;
 }
 
+half GetShadowAttenuation(float3 positionWS, float3 lightDirection, float offset)
+{
+    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
+    tmpVertexInput.positionWS = positionWS + offset * lightDirection;
+    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
+    return MainLightRealtimeShadow(shadowCoord);
+}
+
 float3 GetHalfLambertDiffuse(float NoL, float3 baseColor, float3 lightColor)
 {
     float halfLambert = pow(NoL * 0.5 + 0.5, 2);

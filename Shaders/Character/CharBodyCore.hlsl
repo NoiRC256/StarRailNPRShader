@@ -44,6 +44,7 @@ CBUFFER_START(UnityPerMaterial)
     float4 _Color;
     float4 _BackColor;
     float4 _Maps_ST;
+    float4 _ReceiveShadowColor;
 
     float _RampCoolWarmLerpFactor;
 
@@ -163,11 +164,7 @@ void BodyColorFragment(
     diffuseData.NoL = dirWS.NoL;
     diffuseData.singleMaterial = false;
     diffuseData.rampCoolOrWarm = _RampCoolWarmLerpFactor;
-    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
-    tmpVertexInput.positionWS = i.positionWS;
-    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
-    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
-    diffuseData.shadowAttenutation = shadowAttenutation;
+    diffuseData.shadowAttenutation = GetShadowAttenuation(i.positionWS, dirWS.L, 0.9);
 
     SpecularData specularData;
     specularData.color = specularColor.rgb;
@@ -225,6 +222,10 @@ void BodyColorFragment(
     diffuse = SetLuminance(float3(diffuse + diffuseAdd), luminance);
     colorTarget = float4(diffuse + specular + rimLight + emission + specularAdd, texColor.a);
     bloomTarget = float4(bloomIntensity, 0, 0, 0);
+
+    float4 shadowColor = _ReceiveShadowColor;
+    colorTarget = lerp(colorTarget, shadowColor, (1.0 - diffuseData.shadowAttenutation) * shadowColor.a);
+
     ApplyDebugSettings(lightMap, colorTarget, bloomTarget);
 }
 

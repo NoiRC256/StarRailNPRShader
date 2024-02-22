@@ -46,6 +46,9 @@ Shader "Honkai Star Rail/Character/Face"
         _ShadowColor("Face Shadow Color", Color) = (0.5, 0.5, 0.5, 1)
         _EyeShadowColor("Eye Shadow Color", Color) = (1, 1, 1, 1)
 
+        [HeaderFoldout(Received Shadows)]
+        _ReceiveShadowColor("Received Shadow Color", Color) = (0, 0, 0, 0.5)
+
         [HeaderFoldout(Emission, Use Albedo.a as emission map)]
         _EmissionColor("Color", Color) = (1, 1, 1, 1)
         _EmissionThreshold("Threshold", Range(0, 1)) = 0.1

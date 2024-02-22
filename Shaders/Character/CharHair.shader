@@ -48,6 +48,9 @@ Shader "Honkai Star Rail/Character/Hair"
         [RampTexture] _RampMapWarm("Ramp Map (Warm)", 2D) = "white" {}
         _RampCoolWarmLerpFactor("Cool / Warm", Range(0, 1)) = 1
 
+        [HeaderFoldout(Received Shadows)]
+        _ReceiveShadowColor("Received Shadow Color", Color) = (0, 0, 0, 0.5)
+
         [HeaderFoldout(Specular)]
         _SpecularColor0("Color", Color) = (1,1,1,1)
         _SpecularShininess0("Shininess", Range(0.1, 500)) = 10

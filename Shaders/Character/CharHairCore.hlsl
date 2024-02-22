@@ -43,6 +43,7 @@ CBUFFER_START(UnityPerMaterial)
     float4 _Color;
     float4 _BackColor;
     float4 _Maps_ST;
+    float4 _ReceiveShadowColor;
 
     float _RampCoolWarmLerpFactor;
 
@@ -104,12 +105,7 @@ float4 BaseHairOpaqueFragment(
     diffuseData.NoL = dirWS.NoL;
     diffuseData.singleMaterial = true;
     diffuseData.rampCoolOrWarm = _RampCoolWarmLerpFactor;
-
-    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
-    tmpVertexInput.positionWS = i.positionWS; // Add a normal bias term
-    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
-    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
-    diffuseData.shadowAttenutation = shadowAttenutation;
+    diffuseData.shadowAttenutation = GetShadowAttenuation(i.positionWS, dirWS.L, 0.9);
 
     SpecularData specularData;
     specularData.color = _SpecularColor0.rgb;
@@ -165,14 +161,9 @@ float4 BaseHairOpaqueFragment(
 
     diffuse = SetLuminance(float3(diffuse + diffuseAdd), luminance);
     float4 colorTarget = float4(diffuse + specular + rimLight + emission + specularAdd, texColor.a);
-
-    // VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
-    // tmpVertexInput.positionWS = i.positionWS; // Add a normal bias term
-    // float4 shadowCoord = GetShadowCoord(tmpVertexInput);
-    // half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
-    // float4 shadowColor = float4(0.2,0.2,0.2,0.5);
-    // colorTarget = lerp(colorTarget, shadowColor, (1.0 - shadowAttenutation) * shadowColor.a);
-
+    
+    float4 shadowColor = _ReceiveShadowColor;
+    colorTarget = lerp(colorTarget, shadowColor, (1.0 - diffuseData.shadowAttenutation) * shadowColor.a);
 
     // Output
     return colorTarget;

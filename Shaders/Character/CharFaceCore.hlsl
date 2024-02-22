@@ -40,6 +40,7 @@ CBUFFER_START(UnityPerMaterial)
 
     float4 _Color;
     float4 _Maps_ST;
+    float4 _ReceiveShadowColor;
 
     float4 _ShadowColor;
     float4 _EyeShadowColor;
@@ -143,10 +144,7 @@ void FaceOpaqueAndZFragment(
     texColor.rgb = lerp(texColor.rgb, exEyeShadow, _ExShadowIntensity);
 
     // Diffuse
-    VertexPositionInputs tmpVertexInput = (VertexPositionInputs)0;
-    tmpVertexInput.positionWS = i.positionWS;
-    float4 shadowCoord = GetShadowCoord(tmpVertexInput);
-    half shadowAttenutation = MainLightRealtimeShadow(shadowCoord);
+    half shadowAttenutation = GetShadowAttenuation(i.positionWS, dirWS.L, 0.9);
     float3 diffuse = GetFaceOrEyeDiffuse(dirWS, headDirWS, i.uv, texColor.rgb, light.color, faceMap, shadowAttenutation);
     float luminance = Luminance(diffuse);
 
@@ -174,6 +172,9 @@ void FaceOpaqueAndZFragment(
     diffuse = SetLuminance(float3(diffuse + diffuseAdd), luminance);
     colorTarget = float4(diffuse + emission, texColor.a);
     bloomTarget = float4(_BloomIntensity0, 0, 0, 0);
+
+    float4 shadowColor = _ReceiveShadowColor;
+    colorTarget = lerp(colorTarget, shadowColor, (1.0 - shadowAttenutation) * shadowColor.a);
 }
 
 void FaceWriteEyeStencilFragment(CharCoreVaryings i)
